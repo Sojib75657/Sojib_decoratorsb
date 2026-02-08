@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+   <title>ডেকোর মাস্টার প্রো</title>
+   
+   <!-- Libraries -->
+   <script src="https://cdn.tailwindcss.com"></script>
+   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+   <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+   
+   <!-- Firebase SDK -->
+   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+   <script>
+       const firebaseConfig = {
+           apiKey: "AIzaSyDqubf8dDidhhy3YJXmb_DSKorr3sFtJSg",
+           authDomain: "decormaster-pro.firebaseapp.com",
+           databaseURL: "https://decormaster-pro-default-rtdb.firebaseio.com",
+           projectId: "decormaster-pro",
+           storageBucket: "decormaster-pro.firebasestorage.app",
+           messagingSenderId: "578264547380",
+           appId: "1:578264547380:web:9682ac8345e32e1b898a61",
+           measurementId: "G-568FHR17K1"
+       };
+       
+       let db;
+       let isOnline = false;
+       let currentUser = null;
+       let userId = null;
+       
+       try {
+           firebase.initializeApp(firebaseConfig);
+           db = firebase.database();
+       } catch(e) { console.log("Offline Mode"); }
+   </script>
+
+   <script>
+       tailwind.config = {
+           theme: {
+               extend: {
+                   colors: {
+                       primary: '#1e3a8a', 
+                       secondary: '#f59e0b', 
+                       success: '#10b981',
+                       danger: '#ef4444',
+                       surface: '#f8fafc'
+                   },
+                   fontFamily: { sans: ['Hind Siliguri', 'sans-serif'] },
+                   boxShadow: { 'card': '0 4px 15px rgba(0,0,0,0.05)' }
+               }
+           }
+       }
+   </script>
+
+   <link rel="stylesheet" href="style.css">
+<base target="_blank">
+</head>
+<body class="text-slate-800 pb-24 select-none">
+
+   <!-- AUTH MODAL -->
+   <div id="auth-modal" class="fixed inset-0 bg-primary z-[100] flex items-center justify-center p-4">
+       <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl">
+           <div class="text-center mb-6">
+               <div class="w-16 h-16 bg-secondary rounded-2xl flex items-center justify-center text-3xl text-white mx-auto mb-3 shadow-lg">
+                   <i class="fas fa-couch"></i>
+               </div>
+               <h2 class="text-2xl font-bold text-primary">ডেকোর মাস্টার প্রো</h2>
+               <p class="text-sm text-gray-500">লগইন করুন</p>
+           </div>
+           
+           <div id="auth-form">
+               <input type="email" id="auth-email" placeholder="ইমেইল" class="w-full bg-slate-50 border p-3 rounded-xl mb-3">
+               <input type="password" id="auth-password" placeholder="পাসওয়ার্ড" class="w-full bg-slate-50 border p-3 rounded-xl mb-4">
+               <button onclick="login()" class="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg mb-2">লগইন</button>
+               <button onclick="showRegister()" class="w-full bg-slate-100 text-gray-600 py-3 rounded-xl font-bold text-sm">নতুন অ্যাকাউন্ট তৈরি করুন</button>
+           </div>
+           
+           <div id="register-form" class="hide">
+               <input type="text" id="reg-name" placeholder="দোকানের নাম" class="w-full bg-slate-50 border p-3 rounded-xl mb-3">
+               <input type="email" id="reg-email" placeholder="ইমেইল" class="w-full bg-slate-50 border p-3 rounded-xl mb-3">
+               <input type="password" id="reg-password" placeholder="পাসওয়ার্ড" class="w-full bg-slate-50 border p-3 rounded-xl mb-4">
+               <button onclick="register()" class="w-full bg-secondary text-white py-3 rounded-xl font-bold shadow-lg mb-2">রেজিস্টার</button>
+               <button onclick="showLogin()" class="w-full bg-slate-100 text-gray-600 py-3 rounded-xl font-bold text-sm">লগইন পেজে যান</button>
+           </div>
+       </div>
+   </div>
+
+   <!-- USER MENU -->
+   <div id="user-menu" class="hide fixed top-20 right-4 bg-white rounded-xl shadow-2xl z-[60] border border-gray-100 p-3 w-48">
+       <div class="border-b pb-2 mb-2">
+           <p class="font-bold text-sm text-primary truncate" id="user-email"></p>
+           <p class="text-xs text-gray-500" id="user-shop"></p>
+       </div>
+       <button onclick="logout()" class="w-full text-left text-red-500 text-sm font-bold py-2 hover:bg-red-50 rounded-lg px-2">
+           <i class="fas fa-sign-out-alt mr-2"></i> লগআউট
+       </button>
+   </div>
+
+   <!-- IMAGE ZOOM MODAL -->
+   <div id="zoom-modal" class="zoom-modal hide" onclick="closeZoomModal()">
+       <img id="zoomed-image" src="" alt="Zoomed">
+       <button class="absolute top-4 right-4 text-white text-2xl w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md">
+           <i class="fas fa-times"></i>
+       </button>
+   </div>
+
+   <!-- HEADER -->
+   <header class="bg-primary text-white sticky top-0 z-50 shadow-lg rounded-b-3xl">
+       <div class="px-5 py-4 flex justify-between items-center">
+           <div class="flex items-center gap-3">
+               <div class="w-10 h-10 bg-secondary rounded-xl flex items-center justify-center text-xl shadow-lg border-2 border-white/20 text-white">
+                   <i class="fas fa-couch"></i>
+               </div>
+               <div>
+                   <h1 class="font-bold text-xl leading-none tracking-wide">ডেকোর মাস্টার প্রো</h1>
+                   <div class="flex items-center gap-1 mt-1">
+                       <span id="conn-dot" class="w-2 h-2 rounded-full bg-red-500"></span>
+                       <p class="text-[10px] opacity-90 font-light" id="conn-text">অফলাইন</p>
+                   </div>
+               </div>
+           </div>
+           <div class="flex gap-4 items-center">
+               <div class="relative cursor-pointer" onclick="toggleNotifications()">
+                   <i class="fas fa-bell text-xl"></i>
+                   <span id="notif-badge" class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border border-primary hide"></span>
+               </div>
+               <button onclick="toggleUserMenu()" class="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-md">
+                   <i class="fas fa-user text-sm"></i>
+               </button>
+               <button onclick="manualSync()" class="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-md active:scale-95 transition"><i class="fas fa-sync text-sm" id="sync-icon"></i></button>
+           </div>
+       </div>
+   </header>
+
+   <!-- NOTIFICATION PANEL -->
+   <div id="notif-panel" class="fixed top-20 right-5 w-72 bg-white rounded-xl shadow-2xl z-[60] hide border border-gray-100 overflow-hidden">
+       <div class="bg-gray-50 p-3 border-b font-bold text-primary flex justify-between">
+           <span>নোটিফিকেশন</span>
+           <i class="fas fa-times cursor-pointer" onclick="toggleNotifications()"></i>
+       </div>
+       <div id="notif-list" class="max-h-80 overflow-y-auto p-2 space-y-2"></div>
+   </div>
+
+   <!-- MAIN APP CONTAINER -->
+   <main id="app" class="p-4 max-w-xl mx-auto min-h-screen"></main>
+
+   <!-- BOTTOM NAV -->
+   <nav class="fixed bottom-0 w-full bg-white border-t border-gray-100 shadow-[0_-5px_25px_rgba(0,0,0,0.05)] z-40 rounded-t-3xl">
+       <div class="flex justify-around items-center py-2 max-w-xl mx-auto text-gray-400">
+           <button onclick="router('dashboard')" class="nav-btn flex flex-col items-center gap-1 p-2 w-16" id="nav-dashboard">
+               <i class="fas fa-th-large text-lg"></i><span class="text-[10px] font-bold">হোম</span>
+           </button>
+           <button onclick="router('calendar')" class="nav-btn flex flex-col items-center gap-1 p-2 w-16" id="nav-calendar">
+               <i class="fas fa-calendar-alt text-lg"></i><span class="text-[10px] font-bold">ক্যালেন্ডার</span>
+           </button>
+           <div class="relative -top-8 z-50">
+               <button id="nav-booking" onclick="router('booking')" class="w-16 h-16 bg-secondary text-white rounded-full flex items-center justify-center text-2xl shadow-xl border-[6px] border-[#f1f5f9] active:scale-90 transition transform">
+                   <i class="fas fa-plus"></i>
+               </button>
+           </div>
+           <button onclick="router('workers')" class="nav-btn flex flex-col items-center gap-1 p-2 w-16" id="nav-workers">
+               <i class="fas fa-hard-hat text-lg"></i><span class="text-[10px] font-bold">কারিগর</span>
+           </button>
+           <button onclick="router('settings')" class="nav-btn flex flex-col items-center gap-1 p-2 w-16" id="nav-settings">
+               <i class="fas fa-cog text-lg"></i><span class="text-[10px] font-bold">সেটিংস</span>
+           </button>
+       </div>
+   </nav>
+
+   <!-- MODALS -->
+
+   <!-- 1. ITEM INPUT MODAL -->
+   <div id="item-input-modal" class="fixed inset-0 bg-black/60 z-[60] hide flex items-center justify-center p-4 backdrop-blur-sm">
+       <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-[bounce_0.2s_ease-out]">
+           <h3 class="text-lg font-bold mb-4 border-b pb-2 text-primary flex justify-between">
+               <span id="input-modal-title">আইটেম যুক্ত করুন</span>
+               <i class="fas fa-times cursor-pointer text-gray-400" onclick="closeModal('item-input-modal')"></i>
+           </h3>
+           <div id="item-input-body" class="space-y-4"></div>
+           <button onclick="confirmItemInput()" class="w-full bg-secondary text-white py-3 rounded-xl font-bold shadow-lg mt-5 active:scale-95 transition">নিশ্চিত করুন</button>
+       </div>
+   </div>
+
+   <!-- 2. CONFIRM BOOKING MODAL -->
+   <div id="confirm-booking-modal" class="fixed inset-0 bg-black/60 z-[70] hide flex items-center justify-center p-4 backdrop-blur-sm">
+       <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl">
+           <h3 class="text-xl font-bold mb-6 text-center text-primary border-b pb-3">বিল কনফার্মেশন</h3>
+           
+           <div class="space-y-4 mb-6">
+               <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 flex justify-between items-center">
+                   <span class="text-sm font-bold text-gray-500">মোট বিল (হিসাব)</span>
+                   <span class="text-xl font-bold text-slate-800" id="conf-total">৳0</span>
+               </div>
+               
+               <div>
+                   <label class="block text-xs font-bold text-primary mb-1 pl-1">চুক্তি বিল / ফাইনাল বিল</label>
+                   <input type="number" id="conf-final" class="w-full bg-blue-50 border border-blue-100 p-3 rounded-xl font-bold text-lg text-blue-900 focus:outline-none" placeholder="কাস্টমারের সাথে ফাইনাল কত?">
+               </div>
+
+               <div>
+                   <label class="block text-xs font-bold text-green-600 mb-1 pl-1">বায়না / জমা</label>
+                   <input type="number" id="conf-adv" class="w-full bg-green-50 border border-green-100 p-3 rounded-xl font-bold text-lg text-green-800 focus:outline-none" placeholder="কত টাকা দিয়েছে?">
+               </div>
+           </div>
+
+           <div class="flex gap-3">
+               <button onclick="closeModal('confirm-booking-modal')" class="flex-1 py-3 rounded-xl bg-slate-100 font-bold text-gray-500">বাতিল</button>
+               <button onclick="completeBooking()" class="flex-1 bg-primary text-white py-3 rounded-xl font-bold shadow-lg">ইভেন্ট সেভ করুন</button>
+           </div>
+       </div>
+   </div>
+
+   <!-- 3. SUCCESS MODAL -->
+   <div id="success-modal" class="fixed inset-0 bg-black/70 z-[99] hide flex items-center justify-center p-4 backdrop-blur-sm">
+       <div class="bg-white w-full max-w-xs rounded-3xl p-8 shadow-2xl text-center transform transition-all scale-100">
+           <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner animate-[bounce_1s_infinite]">
+               <i class="fas fa-check text-4xl text-green-500"></i>
+           </div>
+           <h3 class="text-2xl font-bold text-slate-800 mb-2">অভিনন্দন!</h3>
+           <p class="text-sm text-gray-500 mb-8">ইভেন্টটি সফলভাবে সেভ করা হয়েছে এবং অনলাইনে আপলোড হয়েছে।</p>
+           <button onclick="closeSuccessModal()" class="w-full bg-success text-white py-3 rounded-xl font-bold shadow-lg hover:bg-green-600 transition active:scale-95">ঠিক আছে</button>
+       </div>
+   </div>
+
+   <!-- 4. SETUP MODAL (With Photo) -->
+   <div id="setup-modal" class="fixed inset-0 bg-black/60 z-[95] hide flex items-center justify-center p-4 backdrop-blur-sm">
+       <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl">
+           <h3 class="text-lg font-bold mb-4 border-b pb-2 text-primary flex justify-between">
+               <span id="setup-title">আইটেম সেটআপ</span>
+               <i class="fas fa-times cursor-pointer text-gray-400" onclick="closeModal('setup-modal')"></i>
+           </h3>
+           <div class="space-y-4">
+               <input type="hidden" id="setup-key"><input type="hidden" id="setup-idx"><input type="hidden" id="setup-mode">
+               
+               <div class="bg-slate-50 p-3 rounded-xl border border-dashed text-center">
+                   <label class="text-xs font-bold text-gray-500 block mb-2">আইটেমের ছবি</label>
+                   <div id="current-item-photo-preview" class="mb-2 hide">
+                       <img src="" class="w-full h-32 object-cover rounded-lg">
+                   </div>
+                   <input type="file" id="setup-photo" class="text-xs" accept="image/*" onchange="previewItemPhoto(this)">
+               </div>
+               
+               <div><label class="block text-xs font-bold text-gray-500 mb-1">নাম</label><input type="text" id="setup-name" class="w-full bg-slate-50 border p-3 rounded-xl focus:outline-none"></div>
+               <div><label class="block text-xs font-bold text-gray-500 mb-1">দাম / ভাড়া</label><input type="number" id="setup-price" class="w-full bg-slate-50 border p-3 rounded-xl focus:outline-none"></div>
+           </div>
+           <div class="flex gap-3 mt-6">
+               <button onclick="closeModal('setup-modal')" class="flex-1 py-3 rounded-xl bg-slate-100 font-bold">বাতিল</button>
+               <button onclick="saveSetupData()" class="flex-1 bg-secondary text-white py-3 rounded-xl font-bold shadow-lg">সেভ করুন</button>
+           </div>
+       </div>
+   </div>
+
+   <!-- 5. WORKER MODAL -->
+   <div id="worker-modal" class="fixed inset-0 bg-black/60 z-[80] hide flex items-center justify-center p-4 backdrop-blur-sm">
+       <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl">
+           <h3 class="text-lg font-bold mb-4 text-primary border-b pb-2">কারিগর তথ্য</h3>
+           <div class="space-y-3">
+               <input type="hidden" id="w-id">
+               <input type="text" id="w-name" placeholder="নাম" class="w-full bg-slate-50 border p-3 rounded-xl">
+               <input type="number" id="w-phone" placeholder="মোবাইল" class="w-full bg-slate-50 border p-3 rounded-xl">
+               <div class="bg-slate-50 p-3 rounded-xl border border-dashed text-center"><label class="text-xs font-bold text-gray-500 block mb-2">ছবি (ঐচ্ছিক)</label><input type="file" id="w-photo" class="text-xs" accept="image/*"></div>
+           </div>
+           <div class="flex gap-3 mt-5">
+               <button onclick="closeModal('worker-modal')" class="flex-1 py-3 rounded-xl bg-slate-100">বাতিল</button>
+               <button onclick="saveWorkerData()" class="flex-1 bg-primary text-white py-3 rounded-xl font-bold">সেভ করুন</button>
+           </div>
+       </div>
+   </div>
+
+   <!-- 6. SLIP MODAL (With Serial Toggle) -->
+   <div id="slip-modal" class="fixed inset-0 bg-black/90 z-[85] hide flex items-center justify-center p-2 overflow-auto">
+       <div class="w-full max-w-xl bg-white rounded-lg relative h-auto max-h-full overflow-y-auto">
+           <button onclick="closeModal('slip-modal')" class="absolute top-2 right-2 w-8 h-8 bg-red-100 text-red-500 rounded-full z-50 font-bold no-print">X</button>
+           <div id="slip-content" class="bg-white p-8 text-black">
+               <div class="border-b-4 border-primary pb-4 mb-6 flex justify-between items-start">
+                   <div><h1 class="text-3xl font-bold text-primary" id="slip-shop-name">Shop Name</h1><p class="text-sm font-bold text-gray-700 mt-1" id="slip-shop-addr">Address</p><p class="text-sm text-gray-600" id="slip-shop-phone">Phone</p></div>
+                   <div class="text-right"><span class="bg-primary text-white px-3 py-1 text-xs rounded-full font-bold uppercase">Invoice</span><h2 class="text-xl font-bold text-gray-300 mt-2">BILL</h2></div>
+               </div>
+               <div class="flex justify-between mb-6 bg-slate-50 p-4 rounded-lg border border-slate-100">
+                   <div><h3 id="s-name" class="font-bold text-lg">Client</h3><p id="s-phone" class="text-sm">Phone</p><p id="s-loc" class="text-xs mt-1">Location</p></div>
+                   <div class="text-right"><p class="text-sm font-bold"><span class="text-gray-500 font-normal">তারিখ:</span> <span id="s-date"></span></p><p class="text-sm font-bold"><span class="text-gray-500 font-normal">আইডি:</span> <span id="s-id" class="text-primary"></span></p><span id="s-status" class="inline-block mt-2 text-[10px] border px-2 py-0.5 rounded"></span></div>
+               </div>
+               
+               <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4">
+                   <div class="flex justify-between items-center">
+                       <div>
+                           <p class="text-xs text-gray-500">ইভেন্ট শুরু</p>
+                           <p class="font-bold text-primary" id="s-start-date"></p>
+                       </div>
+                       <div class="text-center px-4">
+                           <i class="fas fa-arrow-right text-gray-400"></i>
+                       </div>
+                       <div class="text-right">
+                           <p class="text-xs text-gray-500">ইভেন্ট শেষ / ফেরত</p>
+                           <p class="font-bold text-danger" id="s-end-date"></p>
+                       </div>
+                   </div>
+               </div>
+               
+               <table class="w-full text-sm border-collapse mb-6">
+                   <thead>
+                       <tr class="bg-primary text-white text-xs uppercase">
+                           <th class="p-3 text-center serial-col w-12">নং</th>
+                           <th class="p-3 text-left">বিবরণ</th>
+                           <th class="p-3 text-center">পরিমাণ</th>
+                           <th class="p-3 text-right rate-col">দর</th>
+                           <th class="p-3 text-right">মোট</th>
+                       </tr>
+                   </thead>
+                   <tbody id="s-body" class="divide-y divide-gray-100 text-gray-700"></tbody>
+               </table>
+               <div class="flex justify-end"><div class="w-1/2 space-y-2"><div class="flex justify-between text-sm border-b pb-1"><span>মোট বিল:</span> <span id="s-total" class="font-bold"></span></div><div class="flex justify-between text-sm text-green-600 border-b pb-1"><span>জমা:</span> <span id="s-adv" class="font-bold"></span></div><div class="flex justify-between text-sm text-orange-400 border-b pb-1" id="row-discount"><span>ছাড়:</span> <span id="s-disc" class="font-bold"></span></div><div class="flex justify-between text-lg font-bold text-primary pt-1"><span>বাকি:</span> <span id="s-due" class="text-red-500"></span></div></div></div>
+               
+               <div class="mt-12 flex justify-between text-xs text-gray-400 border-t pt-4"><div class="text-center w-32"><p class="border-t pt-1">গ্রাহক</p></div><div class="text-center w-32"><p class="border-t pt-1">কর্তৃপক্ষ</p></div></div>
+           </div>
+           <div class="bg-gray-100 p-4 rounded-b-lg no-print flex flex-col gap-3 border-t">
+               <div class="flex flex-col gap-2">
+                   <label class="flex items-center gap-2 text-sm font-bold text-gray-600 cursor-pointer bg-white p-2 rounded border"><input type="checkbox" id="toggle-rate" checked onchange="toggleRateColumn()" class="w-4 h-4">স্লিপে 'দর' (Rate) দেখান</label>
+                   <label class="flex items-center gap-2 text-sm font-bold text-gray-600 cursor-pointer bg-white p-2 rounded border"><input type="checkbox" id="toggle-serial" checked onchange="toggleSerialColumn()" class="w-4 h-4">ক্রমিক নং দেখান</label>
+               </div>
+               <div class="flex gap-2"><button onclick="downloadSlipAsImage()" class="flex-1 bg-secondary text-white py-3 rounded-xl font-bold"><i class="fas fa-image"></i> JPG</button><button onclick="window.print()" class="flex-1 bg-primary text-white py-3 rounded-xl font-bold"><i class="fas fa-print"></i> PDF</button></div>
+           </div>
+       </div>
+   </div>
+
+   <!-- WARNING MODAL -->
+   <div id="warning-modal" class="fixed inset-0 bg-black/60 z-[90] hide flex items-center justify-center p-4 backdrop-blur-sm">
+       <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl text-center">
+           <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl text-red-500"><i class="fas fa-exclamation-triangle"></i></div>
+           <h3 class="text-xl font-bold text-slate-800 mb-2">সতর্কতা!</h3>
+           <p class="text-sm text-gray-500 mb-4">কিছু মালামাল ফেরত আসেনি। তবুও কি ইভেন্টটি সম্পন্ন করতে চান?</p>
+           <div class="bg-red-50 p-3 rounded-lg text-left text-xs text-red-700 font-bold mb-6 overflow-y-auto max-h-32" id="missing-list-display"></div>
+           <div class="flex gap-3"><button onclick="closeModal('warning-modal')" class="flex-1 py-3 rounded-xl bg-slate-100 font-bold">না</button><button onclick="forceCompleteEvent()" class="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold shadow-lg">হ্যাঁ, করুন</button></div>
+       </div>
+   </div>
+
+   <!-- HISTORY MODAL -->
+   <div id="history-modal" class="fixed inset-0 bg-black/60 z-[95] hide flex items-center justify-center p-4 backdrop-blur-sm">
+       <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl max-h-[80vh] overflow-y-auto">
+           <h3 class="text-lg font-bold mb-4 border-b pb-2 text-primary flex justify-between items-center">
+               <span>বিল হিস্টরি</span>
+               <i class="fas fa-times cursor-pointer text-gray-400" onclick="closeModal('history-modal')"></i>
+           </h3>
+           <div id="history-content" class="space-y-3"></div>
+       </div>
+   </div>
+
+   <script src="script.js"></script>
+</body>
+</html>
